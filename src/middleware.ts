@@ -1,14 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 
 // ─── Route Protection Middleware ────────────────────────────────────────────
-// ALL routes are protected by default. Only public paths listed below
-// can be accessed without authentication.
+// Only specific routes like dashboard require authentication.
+// Public routes can be accessed freely.
 
-// Routes that DON'T require login
-const PUBLIC_PATHS = [
-  "/auth/login",
-  "/auth/signup",
-  "/api/auth",        // Better Auth API endpoints
+// Routes that require login
+const PROTECTED_PATHS = [
+  "/dashboard",
 ];
 
 function getSessionToken(request: NextRequest): string | undefined {
@@ -18,8 +16,10 @@ function getSessionToken(request: NextRequest): string | undefined {
   );
 }
 
-function isPublicPath(pathname: string): boolean {
-  return PUBLIC_PATHS.some((p) => pathname.startsWith(p));
+function isProtectedPath(pathname: string): boolean {
+  return PROTECTED_PATHS.some(
+    (p) => pathname === p || pathname.startsWith(p + "/")
+  );
 }
 
 export async function middleware(request: NextRequest) {
@@ -27,23 +27,22 @@ export async function middleware(request: NextRequest) {
   const sessionToken = getSessionToken(request);
   const isAuthenticated = !!sessionToken;
 
-  // Allow public paths without auth
-  if (isPublicPath(pathname)) {
-    // If user is already logged in and tries to access login/signup, redirect to home
-    if (
-      isAuthenticated &&
-      (pathname.startsWith("/auth/login") || pathname.startsWith("/auth/signup"))
-    ) {
-      return NextResponse.redirect(new URL("/", request.url));
+  // Enforce auth only for protected routes
+  if (isProtectedPath(pathname)) {
+    if (!isAuthenticated) {
+      const loginUrl = new URL("/auth/login", request.url);
+      loginUrl.searchParams.set("callbackUrl", pathname);
+      return NextResponse.redirect(loginUrl);
     }
     return NextResponse.next();
   }
 
-  // Block all other routes if not authenticated
-  if (!isAuthenticated) {
-    const loginUrl = new URL("/auth/login", request.url);
-    loginUrl.searchParams.set("callbackUrl", pathname);
-    return NextResponse.redirect(loginUrl);
+  // Redirect authenticated users away from authentication pages to home
+  if (
+    isAuthenticated &&
+    (pathname.startsWith("/auth/login") || pathname.startsWith("/auth/signup"))
+  ) {
+    return NextResponse.redirect(new URL("/", request.url));
   }
 
   return NextResponse.next();
@@ -55,3 +54,4 @@ export const config = {
     "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|css|js)$).*)",
   ],
 };
+
