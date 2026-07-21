@@ -1,19 +1,25 @@
 import { NextRequest, NextResponse } from "next/server";
 
-// ─── Protected & Auth Routes ───────────────────────────────────────────────
-// We check for the Better Auth session cookie to decide whether to redirect.
-// The cookie name matches Better Auth's default: "better-auth.session_token"
-// (or "__Secure-better-auth.session_token" in production HTTPS).
+// ─── Route Protection Middleware ────────────────────────────────────────────
+// ALL routes are protected by default. Only public paths listed below
+// can be accessed without authentication.
 
-const PROTECTED_PATHS = ["/dashboard"];
-const AUTH_PATHS = ["/auth/login", "/auth/signup"];
+// Routes that DON'T require login
+const PUBLIC_PATHS = [
+  "/auth/login",
+  "/auth/signup",
+  "/api/auth",        // Better Auth API endpoints
+];
 
 function getSessionToken(request: NextRequest): string | undefined {
-  // Check both the secure (https) and non-secure (http dev) cookie names
   return (
     request.cookies.get("better-auth.session_token")?.value ??
     request.cookies.get("__Secure-better-auth.session_token")?.value
   );
+}
+
+function isPublicPath(pathname: string): boolean {
+  return PUBLIC_PATHS.some((p) => pathname.startsWith(p));
 }
 
 export async function middleware(request: NextRequest) {
@@ -21,24 +27,31 @@ export async function middleware(request: NextRequest) {
   const sessionToken = getSessionToken(request);
   const isAuthenticated = !!sessionToken;
 
-  // Redirect unauthenticated users away from protected routes
-  const isProtected = PROTECTED_PATHS.some((p) => pathname.startsWith(p));
-  if (isProtected && !isAuthenticated) {
-    const loginUrl = new URL("/auth/login", request.url);
-    loginUrl.searchParams.set("callbackUrl", pathname); // preserve intended destination
-    return NextResponse.redirect(loginUrl);
+  // Allow public paths without auth
+  if (isPublicPath(pathname)) {
+    // If user is already logged in and tries to access login/signup, redirect to home
+    if (
+      isAuthenticated &&
+      (pathname.startsWith("/auth/login") || pathname.startsWith("/auth/signup"))
+    ) {
+      return NextResponse.redirect(new URL("/", request.url));
+    }
+    return NextResponse.next();
   }
 
-  // Redirect already-authenticated users away from login/signup
-  const isAuthPage = AUTH_PATHS.some((p) => pathname.startsWith(p));
-  if (isAuthPage && isAuthenticated) {
-    return NextResponse.redirect(new URL("/dashboard", request.url));
+  // Block all other routes if not authenticated
+  if (!isAuthenticated) {
+    const loginUrl = new URL("/auth/login", request.url);
+    loginUrl.searchParams.set("callbackUrl", pathname);
+    return NextResponse.redirect(loginUrl);
   }
 
   return NextResponse.next();
 }
 
 export const config = {
-  // Run middleware on protected + auth routes only (skip _next, api, static)
-  matcher: ["/dashboard/:path*", "/auth/:path*"],
+  // Run on all routes EXCEPT Next.js internals and static files
+  matcher: [
+    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|css|js)$).*)",
+  ],
 };
