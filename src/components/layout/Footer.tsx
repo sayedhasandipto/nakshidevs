@@ -11,7 +11,7 @@ const footerLinks = {
   ],
   support: [
     { label: "হেল্প সেন্টার", href: "/dashboard/support" },
-    { label: "যোগাযোগ করুন", href: "/dashboard/support" },
+    { label: "যোগাযোগ করুন", href: "/contact" },
     { label: "আমাদের সম্পর্কে", href: "/about" },
   ],
   legal: [
