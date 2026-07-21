@@ -137,6 +137,15 @@ export default function DashboardLayout({
               </span>
               Eligibility Checker
             </Link>
+            <Link
+              href="/dashboard/support"
+              className={linkClass("/dashboard/support")}
+            >
+              <span className="material-symbols-outlined text-xl opacity-70">
+                help
+              </span>
+              Support & Help
+            </Link>
           </nav>
         </aside>
 
