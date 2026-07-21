@@ -8,7 +8,8 @@ import { MongoClient } from "mongodb";
 const globalForMongo = global as unknown as { _mongoClient: MongoClient };
 
 if (!globalForMongo._mongoClient) {
-  globalForMongo._mongoClient = new MongoClient(process.env.MONGODB_URI!);
+  const uri = process.env.MONGODB_URI || "mongodb://localhost:27017/dummy";
+  globalForMongo._mongoClient = new MongoClient(uri);
   // Connect eagerly — fire-and-forget (MongoClient queues ops until connected)
   globalForMongo._mongoClient.connect().catch(console.error);
 }

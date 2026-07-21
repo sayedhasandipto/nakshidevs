@@ -3,7 +3,7 @@ import { cookies } from "next/headers";
 import { verifyJWT } from "@/lib/jwt";
 import { MongoClient } from "mongodb";
 
-const client = new MongoClient(process.env.MONGODB_URI!);
+const client = new MongoClient(process.env.MONGODB_URI || "mongodb://localhost:27017/dummy");
 let isConnected = false;
 
 async function getDB() {
