@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { GoogleGenAI } from '@google/genai';
+import Groq from 'groq-sdk';
 import { EligibilityInputs, EligibilityResult } from '@/lib/types/eligibility';
 
 // Define the rule checker logic locally in Bengali
@@ -128,10 +128,10 @@ function runEligibilityCheck(args: EligibilityInputs): EligibilityResult {
 
 export async function POST(req: NextRequest) {
   try {
-    const apiKey = process.env.GEMINI_API_KEY;
+    const apiKey = process.env.GROQ_API_KEY;
     if (!apiKey) {
       return NextResponse.json(
-        { error: 'সার্ভারে GEMINI_API_KEY কনফিগার করা নেই। অনুগ্রহ করে .env ফাইলে এটি যোগ করুন।' },
+        { error: 'সার্ভারে GROQ_API_KEY কনফিগার করা নেই। অনুগ্রহ করে .env ফাইলে এটি যোগ করুন।' },
         { status: 500 }
       );
     }
@@ -146,45 +146,16 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const ai = new GoogleGenAI({ apiKey });
+    const groq = new Groq({ apiKey });
 
-    // Format chat history context for Gemini's contents parameter
-    const contents = messages.map((msg: any) => ({
-      role: msg.role === 'user' ? 'user' : 'model',
-      parts: [{ text: msg.content }]
-    }));
-
-    // Declare the checkEligibilityRule tool
-    const eligibilityTool = {
-      functionDeclarations: [
-        {
-          name: 'checkEligibilityRule',
-          description: 'Calculates the user eligibility status, required documents list, and estimated processing time for Bangladesh government services (e.g., E-Passport, TIN Certificate, Trade License). Call this when you have gathered the required parameters: serviceType, userAge, and residencyStatus.',
-          parameters: {
-            type: 'OBJECT',
-            properties: {
-              serviceType: {
-                type: 'STRING',
-                description: 'The type of service. E.g., "Trade License", "E-Passport", "TIN Certificate", etc.'
-              },
-              userAge: {
-                type: 'INTEGER',
-                description: 'The age of the user in years'
-              },
-              monthlyIncome: {
-                type: 'NUMBER',
-                description: 'The monthly income of the user in BDT (optional)'
-              },
-              residencyStatus: {
-                type: 'STRING',
-                description: 'Residency status of the user, e.g., "Bangladeshi", "Non-Resident Bangladeshi", "Foreigner"'
-              }
-            },
-            required: ['serviceType', 'userAge', 'residencyStatus']
-          }
-        }
-      ]
-    };
+    // Format chat history context for Groq's messages parameter
+    const formattedMessages = messages.map((msg: any) => {
+      const role = msg.role === 'model' ? 'assistant' : msg.role;
+      return {
+        role,
+        content: msg.content
+      };
+    });
 
     const systemInstruction = 
       "You are the NakshiDevs Smart Eligibility & Guidance Agent. " +
@@ -197,60 +168,88 @@ export async function POST(req: NextRequest) {
       "When the tool returns the check result (which is already in Bengali), summarize the eligibility details in a polite, helpful way in Bengali, " +
       "and direct the user to apply using the structured card displayed in the UI.";
 
-    // First model generation call
-    const response = await ai.models.generateContent({
-      model: 'gemini-3.5-flash',
-      contents: contents,
-      config: {
-        systemInstruction,
-        tools: [eligibilityTool]
+    const messagesForGroq = [
+      { role: 'system', content: systemInstruction },
+      ...formattedMessages
+    ];
+
+    // Declare the checkEligibilityRule tool
+    const eligibilityTool = {
+      type: 'function' as const,
+      function: {
+        name: 'checkEligibilityRule',
+        description: 'Calculates the user eligibility status, required documents list, and estimated processing time for Bangladesh government services (e.g., E-Passport, TIN Certificate, Trade License). Call this when you have gathered the required parameters: serviceType, userAge, and residencyStatus.',
+        parameters: {
+          type: 'object',
+          properties: {
+            serviceType: {
+              type: 'string',
+              description: 'The type of service. E.g., "Trade License", "E-Passport", "TIN Certificate", etc.'
+            },
+            userAge: {
+              type: 'integer',
+              description: 'The age of the user in years'
+            },
+            monthlyIncome: {
+              type: 'number',
+              description: 'The monthly income of the user in BDT (optional)'
+            },
+            residencyStatus: {
+              type: 'string',
+              description: 'Residency status of the user, e.g., "Bangladeshi", "Non-Resident Bangladeshi", "Foreigner"'
+            }
+          },
+          required: ['serviceType', 'userAge', 'residencyStatus']
+        }
       }
+    };
+
+    // First model generation call
+    const response = await groq.chat.completions.create({
+      model: 'llama-3.3-70b-versatile',
+      messages: messagesForGroq as any,
+      tools: [eligibilityTool],
+      tool_choice: 'auto'
     });
 
-    const responseText = response.text;
-    const functionCalls = response.functionCalls;
+    const responseMessage = response.choices[0].message;
+    const responseText = responseMessage.content;
+    const toolCalls = responseMessage.tool_calls;
 
-    if (functionCalls && functionCalls.length > 0) {
-      const call = functionCalls[0];
-      if (call.name === 'checkEligibilityRule') {
-        const args = call.args as any;
-        
+    if (toolCalls && toolCalls.length > 0) {
+      const toolCall = toolCalls[0];
+      if (toolCall.function.name === 'checkEligibilityRule') {
+        let args: any = {};
+        try {
+          args = JSON.parse(toolCall.function.arguments);
+        } catch (e) {
+          console.error('Failed to parse tool call arguments:', e);
+        }
+
         // Execute rule logic locally
         const checkResult = runEligibilityCheck({
           serviceType: args.serviceType || '',
-          userAge: Number(args.userAge),
+          userAge: args.userAge ? Number(args.userAge) : 0,
           monthlyIncome: args.monthlyIncome ? Number(args.monthlyIncome) : undefined,
           residencyStatus: args.residencyStatus || ''
         });
 
-        const candidateContent = response.candidates?.[0]?.content;
-        if (!candidateContent) {
-          throw new Error('No candidate content returned from the first model call.');
-        }
-
-        // Feed tool response back to Gemini to generate final summary message
-        const secondResponse = await ai.models.generateContent({
-          model: 'gemini-3.5-flash',
-          contents: [
-            ...contents,
-            candidateContent,
+        // Feed tool response back to Groq to generate final summary message
+        const secondResponse = await groq.chat.completions.create({
+          model: 'llama-3.3-70b-versatile',
+          messages: [
+            ...messagesForGroq,
+            responseMessage,
             {
               role: 'tool',
-              parts: [{
-                functionResponse: {
-                  name: 'checkEligibilityRule',
-                  response: { result: checkResult }
-                }
-              }]
+              tool_call_id: toolCall.id,
+              content: JSON.stringify({ result: checkResult })
             }
-          ],
-          config: {
-            systemInstruction: "You are the NakshiDevs Smart Eligibility & Guidance Agent. Summarize the eligibility check result in friendly Bengali (বাংলা) and explain why they are eligible/not eligible and what documents they need to collect. Inform them they can check the interactive checklist details card above."
-          }
+          ] as any
         });
 
         return NextResponse.json({
-          content: secondResponse.text || 'যোগ্যতা যাচাই সফলভাবে সম্পন্ন হয়েছে।',
+          content: secondResponse.choices[0].message.content || 'যোগ্যতা যাচাই সফলভাবে সম্পন্ন হয়েছে।',
           eligibilityResult: checkResult
         });
       }

@@ -368,18 +368,6 @@ export default function EligibilityCheckerPage() {
                                   <span className="text-[9px] text-gray-400 block uppercase font-black tracking-widest">প্রক্রিয়াকরণ সময়</span>
                                   <span className="text-xs font-black text-gray-800">{message.eligibilityResult.processingTime}</span>
                                 </div>
-                                {message.eligibilityResult.status !== "Not Eligible" && (
-                                  <Button
-                                    size="md"
-                                    className="font-extrabold bg-gradient-to-r from-[#001731] to-[#002f5c] text-white hover:opacity-95 shadow-md rounded-2xl px-6"
-                                    onPress={() => {
-                                      toast.success("আবেদন পোর্টালে নিয়ে যাওয়া হচ্ছে...");
-                                    }}
-                                  >
-                                    এখনই আবেদন করুন
-                                    <span className="material-symbols-outlined text-sm">open_in_new</span>
-                                  </Button>
-                                )}
                               </div>
                             </div>
                           </div>
@@ -444,7 +432,7 @@ export default function EligibilityCheckerPage() {
               />
               <Button
                 type="submit"
-                disabled={isLoading || !inputMessage.trim()}
+                isDisabled={isLoading || !inputMessage.trim()}
                 isIconOnly
                 className="h-10 w-10 shrink-0 bg-gradient-to-tr from-[#001731] to-[#002f5c] text-white shadow-md rounded-xl hover:opacity-95 active:scale-95 transition-all"
               >
