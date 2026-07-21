@@ -79,7 +79,7 @@ export default function SupportPage() {
           </div>
           <div>
             <p className="text-sm font-medium text-gray-500">ফোন</p>
-            <p className="font-semibold text-gray-900">+880 1XXX-XXXXXX</p>
+            <p className="font-semibold text-gray-900">+880 1940-863413</p>
           </div>
         </div>
         <div className="flex items-center gap-4 rounded-2xl border border-gray-100 bg-white p-5 shadow-sm transition-shadow hover:shadow-md">
@@ -88,7 +88,7 @@ export default function SupportPage() {
           </div>
           <div>
             <p className="text-sm font-medium text-gray-500">WhatsApp</p>
-            <p className="font-semibold text-gray-900">+880 1XXX-XXXXXX</p>
+            <p className="font-semibold text-gray-900">+880 1940-863413</p>
           </div>
         </div>
         <div className="flex items-center gap-4 rounded-2xl border border-gray-100 bg-white p-5 shadow-sm transition-shadow hover:shadow-md">
@@ -97,7 +97,9 @@ export default function SupportPage() {
           </div>
           <div>
             <p className="text-sm font-medium text-gray-500">ইমেইল</p>
-            <p className="font-semibold text-gray-900">support@nakshidevs.com</p>
+            <p className="font-semibold text-gray-900">
+              support.nakshidevs@gmail.com
+            </p>
           </div>
         </div>
       </div>
