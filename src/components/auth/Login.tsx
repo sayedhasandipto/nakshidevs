@@ -199,13 +199,6 @@ export default function Login() {
                 >
                   পাসওয়ার্ড (Password)
                 </label>
-                <Link
-                  href="/auth/forgot-password"
-                  className="text-xs text-blue-400 transition-colors hover:text-blue-300"
-                  style={{ fontFamily: "Hind Siliguri, sans-serif" }}
-                >
-                  পাসওয়ার্ড ভুলে গেছেন?
-                </Link>
               </div>
               <div className="relative">
                 <div className="pointer-events-none absolute top-1/2 left-4 -translate-y-1/2 transition-colors duration-200">
