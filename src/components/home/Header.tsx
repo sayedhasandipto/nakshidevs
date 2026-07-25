@@ -38,6 +38,11 @@ export default function Header() {
           <Link href="/">
             <Button variant="ghost">হোম</Button>
           </Link>
+          <Link href="/services">
+            <Button variant="ghost" className="w-full justify-start">
+              সকল সেবা
+            </Button>
+          </Link>
           <Link href="/gov-services">
             <Button variant="ghost">সরকারি সেবা</Button>
           </Link>
@@ -58,7 +63,7 @@ export default function Header() {
           ) : session ? (
             <div className="flex items-center gap-3">
               <Link href="/dashboard" title="ড্যাশবোর্ড">
-                <div className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-full bg-gradient-to-br from-blue-600 to-indigo-600 transition-all hover:shadow-lg">
+                <div className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-full bg-linear-to-br from-blue-600 to-indigo-600 transition-all hover:shadow-lg">
                   <span className="font-bold text-white">{firstInitial}</span>
                 </div>
               </Link>
@@ -98,7 +103,7 @@ export default function Header() {
       <div
         className={`overflow-hidden transition-all duration-300 ease-in-out lg:hidden ${
           mobileMenuOpen
-            ? "max-h-[500px] border-t border-gray-100 opacity-100"
+            ? "max-h-125 border-t border-gray-100 opacity-100"
             : "max-h-0 opacity-0"
         }`}
       >
@@ -106,6 +111,11 @@ export default function Header() {
           <Link href="/">
             <Button variant="ghost" className="w-full justify-start">
               হোম
+            </Button>
+          </Link>
+          <Link href="/services">
+            <Button variant="ghost" className="w-full justify-start">
+              সকল সেবা
             </Button>
           </Link>
           <Link href="/gov-services">
